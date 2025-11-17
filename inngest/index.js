@@ -10,26 +10,32 @@ const syncUserCreation = inngest.createFunction(
   { id: 'sync-user-from-clerk' },
   { event: 'clerk/user.created' },
   async event => {
-    const { id, first_name, last_name, email_addresses, image_url } =
-      event.data;
-    let username = email_addresses[0].email_address.split('@')[0];
+    try {
+      const { id, first_name, last_name, email_addresses, image_url } =
+        event.data;
+      let username = email_addresses[0].email_address.split('@')[0];
 
-    // CHECK AVAILABILITY OF USERNAME
-    const user = await User.findOne({ username });
+      // CHECK AVAILABILITY OF USERNAME
+      const user = await User.findOne({ username });
 
-    if (user) {
-      username = username + Math.floor(Math.random() * 10000);
+      if (user) {
+        username = username + Math.floor(Math.random() * 10000);
+      }
+
+      const userData = {
+        _id: id,
+        email: email_addresses[0].email_address,
+        full_name: first_name + ' ' + last_name,
+        profile_picture: image_url,
+        username,
+      };
+
+      const createdUser = await User.create(userData);
+      console.log('User created successfully:', createdUser._id);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
     }
-
-    const userData = {
-      _id: id,
-      email: email_addresses[0].email_address,
-      full_name: first_name + ' ' + last_name,
-      profile_picture: image_url,
-      username,
-    };
-
-    await User.create(userData);
   }
 );
 
@@ -39,16 +45,24 @@ const syncUserUpdated = inngest.createFunction(
   { id: 'update-user-from-clerk' },
   { event: 'clerk/user.updated' },
   async event => {
-    const { id, first_name, last_name, email_addresses, image_url } =
-      event.data;
+    try {
+      const { id, first_name, last_name, email_addresses, image_url } =
+        event.data;
 
-    const updatedUserData = {
-      email: email_addresses[0].email_address,
-      full_name: first_name + ' ' + last_name,
-      profile_picture: image_url,
-    };
+      const updatedUserData = {
+        email: email_addresses[0].email_address,
+        full_name: first_name + ' ' + last_name,
+        profile_picture: image_url,
+      };
 
-    await User.findByIdAndUpdate(id, updatedUserData);
+      const updatedUser = await User.findByIdAndUpdate(id, updatedUserData, {
+        new: true,
+      });
+      console.log('User updated successfully:', updatedUser._id);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
   }
 );
 
@@ -58,9 +72,15 @@ const syncUserDeleted = inngest.createFunction(
   { id: 'delete-user-with-clerk' },
   { event: 'clerk/user.deleted' },
   async event => {
-    const { id } = event.data;
+    try {
+      const { id } = event.data;
 
-    await User.findByIdAndDelete(id);
+      const deletedUser = await User.findByIdAndDelete(id);
+      console.log('User deleted successfully:', id);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
   }
 );
 
