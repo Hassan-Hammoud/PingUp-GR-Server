@@ -2,11 +2,7 @@ import { Inngest } from 'inngest';
 import User from './../models/User.js';
 
 // Create a client to send and receive events
-export const inngest = new Inngest({
-  id: 'pingup-app',
-  signingKey: process.env.INNGEST_SIGNING_KEY,
-  eventKey: process.env.INNGEST_EVENT_KEY,
-});
+export const inngest = new Inngest({ id: 'pingup-app' });
 
 // INNGEST FUNCTION TO SAVE USER DATA TO A DATABASE
 
@@ -14,51 +10,26 @@ const syncUserCreation = inngest.createFunction(
   { id: 'sync-user-from-clerk' },
   { event: 'clerk/user.created' },
   async event => {
-    try {
-      console.log('Inngest event received:', JSON.stringify(event, null, 2));
+    const { id, first_name, last_name, email_addresses, image_url } =
+      event.data;
+    let username = email_addresses[0].email_address.split('@')[0];
 
-      const { id, first_name, last_name, email_addresses, image_url } = event;
+    // CHECK AVAILABILITY OF USERNAME
+    const user = await User.findOne({ username });
 
-      console.log('Extracted data:', {
-        id,
-        first_name,
-        last_name,
-        email_addresses,
-        image_url,
-      });
-
-      if (!email_addresses || email_addresses.length === 0) {
-        throw new Error('No email addresses found in event data');
-      }
-
-      let username = email_addresses[0].email_address.split('@')[0];
-      console.log('Generated username:', username);
-
-      // CHECK AVAILABILITY OF USERNAME
-      const user = await User.findOne({ username });
-
-      if (user) {
-        username = username + Math.floor(Math.random() * 10000);
-        console.log('Username already exists, generated new:', username);
-      }
-
-      const userData = {
-        _id: id,
-        email: email_addresses[0].email_address,
-        full_name: first_name + ' ' + last_name,
-        profile_picture: image_url,
-        username,
-      };
-
-      console.log('Saving user data:', userData);
-      const createdUser = await User.create(userData);
-      console.log('User created successfully:', createdUser._id);
-      return { success: true, userId: createdUser._id };
-    } catch (error) {
-      console.error('Error creating user:', error.message);
-      console.error('Full error:', error);
-      throw error;
+    if (user) {
+      username = username + Math.floor(Math.random() * 10000);
     }
+
+    const userData = {
+      _id: id,
+      email: email_addresses[0].email_address,
+      full_name: first_name + ' ' + last_name,
+      profile_picture: image_url,
+      username,
+    };
+
+    await User.create(userData);
   }
 );
 
@@ -68,30 +39,16 @@ const syncUserUpdated = inngest.createFunction(
   { id: 'update-user-from-clerk' },
   { event: 'clerk/user.updated' },
   async event => {
-    try {
-      console.log(
-        'Inngest update event received:',
-        JSON.stringify(event, null, 2)
-      );
+    const { id, first_name, last_name, email_addresses, image_url } =
+      event.data;
 
-      const { id, first_name, last_name, email_addresses, image_url } = event;
+    const updatedUserData = {
+      email: email_addresses[0].email_address,
+      full_name: first_name + ' ' + last_name,
+      profile_picture: image_url,
+    };
 
-      const updatedUserData = {
-        email: email_addresses[0].email_address,
-        full_name: first_name + ' ' + last_name,
-        profile_picture: image_url,
-      };
-
-      const updatedUser = await User.findByIdAndUpdate(id, updatedUserData, {
-        new: true,
-      });
-      console.log('User updated successfully:', updatedUser._id);
-      return { success: true, userId: updatedUser._id };
-    } catch (error) {
-      console.error('Error updating user:', error.message);
-      console.error('Full error:', error);
-      throw error;
-    }
+    await User.findByIdAndUpdate(id, updatedUserData);
   }
 );
 
@@ -101,22 +58,9 @@ const syncUserDeleted = inngest.createFunction(
   { id: 'delete-user-with-clerk' },
   { event: 'clerk/user.deleted' },
   async event => {
-    try {
-      console.log(
-        'Inngest delete event received:',
-        JSON.stringify(event, null, 2)
-      );
+    const { id } = event.data;
 
-      const { id } = event;
-
-      const deletedUser = await User.findByIdAndDelete(id);
-      console.log('User deleted successfully:', id);
-      return { success: true, userId: id };
-    } catch (error) {
-      console.error('Error deleting user:', error.message);
-      console.error('Full error:', error);
-      throw error;
-    }
+    await User.findByIdAndDelete(id);
   }
 );
 
