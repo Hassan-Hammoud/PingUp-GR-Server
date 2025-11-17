@@ -17,7 +17,13 @@ app.get('/', (req, res) => {
 });
 
 // Set up the "/api/inngest" (recommended) routes with the serve handler
-app.use('/api/inngest', serve({ client: inngest, functions }));
+// app.use('/api/inngest', serve({ client: inngest, functions }));
+
+// Needed for Clerk → Inngest compatibility
+app.use('/api/inngest', express.raw({ type: '*/*' }));
+
+// Now register Inngest endpoint (POST only)
+app.post('/api/inngest', serve({ client: inngest, functions }));
 
 const PORT = process.env.PORT || 3000;
 
