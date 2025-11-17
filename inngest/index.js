@@ -60,6 +60,8 @@ const syncUserDeleted = inngest.createFunction(
   async event => {
     const { id } = event.data;
 
+    // DELETE USER FROM DATABASE
+
     await User.findByIdAndDelete(id);
   }
 );

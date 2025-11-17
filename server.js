@@ -7,7 +7,7 @@ import { functions, inngest } from './inngest/index.js';
 // import { functions, inngest } from './inngest/index.js';
 
 const app = express();
-await connectDB();
+await connectDB(); //
 
 app.use(express.json());
 
