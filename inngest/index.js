@@ -15,13 +15,9 @@ const syncUserCreation = inngest.createFunction(
   { event: 'clerk/user.created' },
   async event => {
     try {
-      console.log(
-        'Inngest event received:',
-        JSON.stringify(event.data, null, 2)
-      );
+      console.log('Inngest event received:', JSON.stringify(event, null, 2));
 
-      const { id, first_name, last_name, email_addresses, image_url } =
-        event.data;
+      const { id, first_name, last_name, email_addresses, image_url } = event;
 
       console.log('Extracted data:', {
         id,
@@ -75,11 +71,10 @@ const syncUserUpdated = inngest.createFunction(
     try {
       console.log(
         'Inngest update event received:',
-        JSON.stringify(event.data, null, 2)
+        JSON.stringify(event, null, 2)
       );
 
-      const { id, first_name, last_name, email_addresses, image_url } =
-        event.data;
+      const { id, first_name, last_name, email_addresses, image_url } = event;
 
       const updatedUserData = {
         email: email_addresses[0].email_address,
@@ -109,10 +104,10 @@ const syncUserDeleted = inngest.createFunction(
     try {
       console.log(
         'Inngest delete event received:',
-        JSON.stringify(event.data, null, 2)
+        JSON.stringify(event, null, 2)
       );
 
-      const { id } = event.data;
+      const { id } = event;
 
       const deletedUser = await User.findByIdAndDelete(id);
       console.log('User deleted successfully:', id);
