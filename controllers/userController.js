@@ -24,14 +24,14 @@ export const getUserData = async (req, res) => {
 export const updateUserData = async (req, res) => {
   try {
     const { userId } = req.auth();
-    const { username, bio, location, full_name } = req.body;
+    let { username, bio, location, full_name } = req.body;
 
     const tempUser = await User.findById(userId);
 
-    // / !username && (username = tempUser.username);
+    !username && (username = tempUser.username);
 
     if (tempUser.username !== username) {
-      const user = User.findOne({ username });
+      const user = await User.findOne({ username });
       if (user) {
         //  WE WILL NOT CHANGE THE USERNAME IF IT IS ALREADY TAKEN
         username = tempUser.username;
