@@ -5,6 +5,7 @@ import express from 'express';
 import { serve } from 'inngest/express';
 import connectDB from './configs/db.js';
 import { functions, inngest } from './inngest/index.js';
+import postRouter from './routes/postRoutes.js';
 import userRouter from './routes/userRoutes.js';
 
 const app = express();
@@ -23,6 +24,7 @@ app.get('/', (req, res) => {
 // Set up the "/api/inngest" (recommended) routes with the serve handler
 app.use('/api/inngest', serve({ client: inngest, functions }));
 app.use('/api/user', userRouter);
+app.use('/api/post', postRouter);
 
 const PORT = process.env.PORT || 3000;
 
