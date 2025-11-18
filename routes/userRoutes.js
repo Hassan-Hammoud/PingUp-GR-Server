@@ -1,4 +1,5 @@
 import express from 'express';
+import { getUserRecentMessages } from '../controllers/messageController.js';
 import {
   acceptConnectionRequest,
   discoverUsers,
@@ -34,5 +35,6 @@ userRouter.get('/connections', protect, getUsersConnections);
 
 // userRouter.get('/profile', protect, getUserProfiles);
 userRouter.post('/profiles', getUserProfiles);
+userRouter.get('/recent-messages', protect, getUserRecentMessages);
 
 export default userRouter;
