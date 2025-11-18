@@ -1,6 +1,7 @@
 import { Inngest } from 'inngest';
 import sendEmail from '../configs/nodeMailer.js';
 import Connection from '../models/Connections.js';
+import Story from '../models/Story.js';
 import User from './../models/User.js';
 
 // Create a client to send and receive events
@@ -135,10 +136,27 @@ const sendNewConnectionRequestReminder = inngest.createFunction(
   }
 );
 
+// INNGEST FUNCTION TO DELETE STORY AFTER 24 HOURS
+
+const deleteStory = inngest.createFunction(
+  { id: 'story-delete' },
+  { event: 'app/stroy.delete' },
+  async ({ event, step }) => {
+    const { storyId } = event.data;
+    const in24Hours = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await step.sleepUntil('wait-for-24-hours', in24Hours);
+    await step.run('delete-story', async () => {
+      await Story.findOneAndDelete(storyId);
+      return { message: 'Story Deleted.' };
+    });
+  }
+);
+
 // Create an empty array where we'll export future Inngest functions
 export const functions = [
   syncUserCreation,
   syncUserUpdated,
   syncUserDeleted,
   sendNewConnectionRequestReminder,
+  deleteStory,
 ];
