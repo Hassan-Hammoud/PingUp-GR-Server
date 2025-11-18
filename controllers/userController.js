@@ -1,5 +1,6 @@
 import fs from 'fs';
 import imageKit from '../configs/imageKit.js';
+import Connection from '../models/Connections.js';
 import User from '../models/User.js';
 
 // GET USER DATA USING USERID
@@ -171,6 +172,132 @@ export const unfollowUser = async (req, res) => {
       success: true,
       message: 'You Are NO Longer Following This User',
     });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// SEND CONNECTION REQUEST
+
+export const sendConnectionRequest = async (req, res) => {
+  try {
+    const { userId } = req.auth();
+    const { id } = req.body;
+
+    // CHECK IF USER HAS SENT MORE THAN 20 CONNECTIONS REQUESTS IN THE LAST 24 HOURS
+
+    const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const connectionRequests = await Connection.find({
+      from_user_id: userId,
+      created_at: { $gt: last24Hours },
+    });
+
+    if (connectionRequests.length >= 20) {
+      return res.json({
+        success: false,
+        message:
+          'You Have Sent More Than 20 Connection Requests In The Last 24 Hours',
+      });
+    }
+
+    // CHECK IF USERS ARE ALREADY CONNECTED
+
+    const connection = await Connection.findOne({
+      $or: [
+        { from_user_id: userId, to_user_id: id },
+        { from_user_id: id, to_user_id: userId },
+      ],
+    });
+
+    if (!connection) {
+      await Connection.create({
+        from_user_id: userId,
+        to_user_id: id,
+      });
+      return res.json({
+        success: true,
+        message: 'Connection Request Sent Successfully',
+      });
+    } else if (connection && connection.status === 'accepted') {
+      return res.json({
+        success: false,
+        message: 'You Are Already Connected With This User',
+      });
+    }
+
+    return res.json({
+      success: false,
+      message: 'Connection Request Pending',
+    });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// GET USERS CONNECTIONS
+export const getUsersConnections = async (req, res) => {
+  try {
+    const { userId } = req.auth();
+
+    const user = await User.findById(userId).populate(
+      'connections followers following'
+    );
+
+    const connections = user.connections;
+    const followers = user.followers;
+    const following = user.following;
+
+    const pendingConnections = await Connection.find({
+      to_user_id: userId,
+      status: 'pending',
+    })
+      .populate('from_user_id')
+      .map(connection => connection.from_user_id);
+
+    return res.json({
+      success: true,
+      connections,
+      followers,
+      following,
+      pendingConnections,
+    });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// ACCEPT CONNECTION REQUEST
+
+export const acceptConnectionRequest = async (req, res) => {
+  try {
+    const { userId } = req.auth();
+    const { id } = req.body;
+
+    const connection = await Connection.find({
+      from_user_id: id,
+      to_user_id: userId,
+    });
+
+    if (!connection) {
+      res.json({ success: false, message: 'Connection Not Found' });
+    }
+
+    const user = await User.findById(userId);
+    user.connections.push(id);
+    await user.save();
+
+    const toUser = await User.findById(id);
+    toUser.connections.push(userId);
+    await toUser.save();
+
+    connection.status = 'accepted';
+    await connection.save();
+
+    res.json({ success: true, message: 'Connection Accepted Successfully' });
   } catch (error) {
     console.log(error);
     res.json({ success: false, message: error.message });
