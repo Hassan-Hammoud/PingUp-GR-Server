@@ -14,7 +14,7 @@ const postSchema = new mongoose.Schema(
       required: true,
     },
 
-    likes_count: { type: String, ref: 'User' },
+    likes_count: [{ type: String, ref: 'User', default: [] }],
   },
   { timestamps: true, minimize: false }
 );

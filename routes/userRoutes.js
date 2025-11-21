@@ -1,4 +1,6 @@
+import { requireAuth } from '@clerk/express';
 import express from 'express';
+
 import { getUserRecentMessages } from '../controllers/messageController.js';
 import {
   acceptConnectionRequest,
@@ -15,7 +17,7 @@ import { protect } from '../middlewares/auth.js';
 import { upload } from './../configs/multer.js';
 const userRouter = express.Router();
 
-userRouter.get('/data', protect, getUserData);
+userRouter.get('/data', protect, requireAuth(), getUserData);
 
 userRouter.post(
   '/update',
@@ -31,10 +33,10 @@ userRouter.post('/follow', protect, followUser);
 userRouter.post('/unfollow', protect, unfollowUser);
 userRouter.post('/connect', protect, sendConnectionRequest);
 userRouter.post('/accept', protect, acceptConnectionRequest);
-userRouter.get('/connections', protect, getUsersConnections);
+userRouter.get('/connections', protect, requireAuth(), getUsersConnections);
 
 // userRouter.get('/profile', protect, getUserProfiles);
-userRouter.post('/profiles', getUserProfiles);
+userRouter.post('/profiles', requireAuth(), getUserProfiles);
 userRouter.get('/recent-messages', protect, getUserRecentMessages);
 
 export default userRouter;

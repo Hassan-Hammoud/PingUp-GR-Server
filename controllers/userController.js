@@ -114,7 +114,9 @@ export const discoverUsers = async (req, res) => {
         { location: new RegExp(input, 'i') },
       ],
     });
-    const filteredUsers = allUsers.filter(user => user._id !== userId);
+    const filteredUsers = allUsers.filter(
+      user => user._id.toString() !== userId
+    );
 
     res.json({ success: true, users: filteredUsers });
   } catch (error) {
@@ -144,7 +146,10 @@ export const followUser = async (req, res) => {
     await user.save();
 
     const toUser = await User.findById(id);
-    toUser.followers.push(userId);
+    // toUser.followers.push(userId);
+    if (!toUser.followers.includes(userId)) {
+      toUser.followers.push(userId);
+    }
     await toUser.save();
 
     res.json({ success: true, message: 'Now You Are Following This User' });
@@ -163,11 +168,13 @@ export const unfollowUser = async (req, res) => {
 
     const user = await User.findById(userId);
 
-    user.following = user.following.filter(user => user !== id);
+    user.following = user.following.filter(user => user.toString() !== id);
     await user.save();
 
     const toUser = await User.findById(id);
-    toUser.followers = toUser.followers.filter(user => user !== userId);
+    toUser.followers = toUser.followers.filter(
+      user => user.toString() !== userId
+    );
     await toUser.save();
 
     res.json({
@@ -258,12 +265,21 @@ export const getUsersConnections = async (req, res) => {
     const followers = user.followers;
     const following = user.following;
 
-    const pendingConnections = await Connection.find({
+    // const pendingConnections = await Connection.find({
+    //   to_user_id: userId,
+    //   status: 'pending',
+    // })
+    //   .populate('from_user_id')
+    //   .map(connection => connection.from_user_id);
+
+    const pendingRequests = await Connection.find({
       to_user_id: userId,
       status: 'pending',
-    })
-      .populate('from_user_id')
-      .map(connection => connection.from_user_id);
+    }).populate('from_user_id');
+
+    const pendingConnections = pendingRequests.map(
+      connection => connection.from_user_id
+    );
 
     return res.json({
       success: true,
@@ -285,7 +301,7 @@ export const acceptConnectionRequest = async (req, res) => {
     const { userId } = req.auth();
     const { id } = req.body;
 
-    const connection = await Connection.find({
+    const connection = await Connection.findOne({
       from_user_id: id,
       to_user_id: userId,
     });
@@ -294,12 +310,20 @@ export const acceptConnectionRequest = async (req, res) => {
       res.json({ success: false, message: 'Connection Not Found' });
     }
 
+    if (connection.status === 'accepted') {
+      return res.json({ success: false, message: 'Already connected' });
+    }
+
     const user = await User.findById(userId);
-    user.connections.push(id);
+    if (!user.connections.some(u => u.toString() === id)) {
+      user.connections.push(id);
+    }
     await user.save();
 
     const toUser = await User.findById(id);
-    toUser.connections.push(userId);
+    if (!toUser.connections.some(u => u.toString() === userId)) {
+      toUser.connections.push(userId);
+    }
     await toUser.save();
 
     connection.status = 'accepted';
@@ -315,7 +339,7 @@ export const acceptConnectionRequest = async (req, res) => {
 //GET USER PROFILE
 export const getUserProfiles = async (req, res) => {
   try {
-    const { profileId } = req.auth();
+    const { profileId } = req.body;
 
     const profile = await User.findById(profileId);
 
@@ -323,7 +347,9 @@ export const getUserProfiles = async (req, res) => {
       return res.json({ success: false, message: 'Profile Not Found' });
     }
 
-    const posts = await Post.find({ user: profileId }).populate('user');
+    const posts = await Post.find({ user: profileId })
+      .populate('user')
+      .sort({ createdAt: -1 });
 
     res.json({ success: true, profile, posts });
   } catch (error) {

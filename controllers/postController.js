@@ -72,7 +72,7 @@ export const getFeedPost = async (req, res) => {
 export const likePost = async (req, res) => {
   try {
     const { userId } = req.auth();
-    const postId = req.body;
+    const { postId } = req.body;
 
     const post = await Post.findById(postId);
 
@@ -85,8 +85,6 @@ export const likePost = async (req, res) => {
       await post.save();
       res.json({ success: true, message: 'Post Liked' });
     }
-
-    res.json({ success: true, posts });
   } catch (error) {
     console.log(error);
     res.json({ success: false, message: error.message });
